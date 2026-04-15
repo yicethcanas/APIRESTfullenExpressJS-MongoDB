@@ -19,14 +19,16 @@ router.get('/verificar/:year/:month/:day', async (req, res) => {
     }
 });
 
-// router.get('/listar', async (req, res) => {
-//     try {
-//         const data = await listarFestivos();
-//         res.json(data);
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ error: 'Error al consultar los festivos' });
-//     }
-// });
+router.get('/obtener/:year', async (req, res) => {
+    const { year } = req.params;
+
+    try {
+        const data = await listarFestivos(parseInt(year));
+        res.json(data);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al consultar los festivos' });
+    }
+});
 
 module.exports = router;
