@@ -16,15 +16,15 @@ function calcularPascua(year) {
     const d = (19 * a + 24) % 30;
     const dias = d + ((2 * b + 4 * c + 6 * d + 5) % 7);
 
-    const fecha = new Date(year, 2, 15); 
-    fecha.setDate(fecha.getDate() + dias + 7); 
+    const fecha = new Date(year, 2, 15);
+    fecha.setDate(fecha.getDate() + dias + 7);
 
     return fecha;
 }
 
 function siguienteLunes(fecha) {
     const nueva = new Date(fecha);
-    const diaSemana = nueva.getDay(); 
+    const diaSemana = nueva.getDay();
 
     if (diaSemana === 1) return nueva;
 
@@ -32,6 +32,34 @@ function siguienteLunes(fecha) {
     nueva.setDate(nueva.getDate() + diasParaLunes);
 
     return nueva;
+}
+
+function calcularFechaFestivo(festivo, year) {
+    if (festivo.id === 1) {
+        return new Date(year, festivo.mes - 1, festivo.dia);
+    }
+    if (festivo.id === 2) {
+        const base = new Date(year, festivo.mes - 1, festivo.dia);
+        return siguienteLunes(base);
+    }
+    if (festivo.id === 3) {
+        const fecha = calcularPascua(year);
+        fecha.setDate(fecha.getDate() + festivo.diasPascua);
+        return fecha;
+    }
+    if (festivo.id === 4) {
+        const fecha = calcularPascua(year);
+        fecha.setDate(fecha.getDate() + festivo.diasPascua);
+        return siguienteLunes(fecha);
+    }
+    return null;
+}
+
+function formatearFecha(fecha) {
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 async function verificarFecha(year, month, day) {
@@ -42,65 +70,36 @@ async function verificarFecha(year, month, day) {
     const festivos = await Festivo.find();
 
     for (const festivo of festivos) {
+        const fecha = calcularFechaFestivo(festivo, year);
+        if (!fecha) continue;
 
-        if (festivo.id === 1) {
-            if (festivo.dia === day && festivo.mes === month) {
-                return {
-                    mensaje: 'Es festivo',
-                    festivo: festivo.nombre
-                };
-            }
-        }
-        if (festivo.id === 2) {
-            let fecha = new Date(year, festivo.mes - 1, festivo.dia);
-            fecha = siguienteLunes(fecha);
-
-            if (
-                fecha.getDate() === day &&
-                fecha.getMonth() + 1 === month
-            ) {
-                return {
-                    mensaje: 'Es festivo',
-                    festivo: festivo.nombre
-                };
-            }
-        }
-        if (festivo.id === 3) {
-            let fecha = calcularPascua(year);
-            fecha.setDate(fecha.getDate() + festivo.diasPascua);
-
-            if (
-                fecha.getDate() === day &&
-                fecha.getMonth() + 1 === month
-            ) {
-                return {
-                    mensaje: 'Es festivo',
-                    festivo: festivo.nombre
-                };
-            }
-        }
-        if (festivo.id === 4) {
-            let fecha = calcularPascua(year);
-            fecha.setDate(fecha.getDate() + festivo.diasPascua);
-            fecha = siguienteLunes(fecha);
-
-            if (
-                fecha.getDate() === day &&
-                fecha.getMonth() + 1 === month
-            ) {
-                return {
-                    mensaje: 'Es festivo',
-                    festivo: festivo.nombre
-                };
-            }
+        if (fecha.getDate() === day && fecha.getMonth() + 1 === month) {
+            return {
+                mensaje: 'Es festivo',
+                festivo: festivo.nombre
+            };
         }
     }
 
     return { mensaje: 'No es festivo' };
 }
 
-async function listarFestivos() {
-    return await Festivo.find().sort({ id: 1, mes: 1, dia: 1 });
+async function listarFestivos(year) {
+    const festivos = await Festivo.find();
+
+    const resultado = festivos
+        .map(f => {
+            const fecha = calcularFechaFestivo(f, year);
+            if (!fecha) return null;
+            return {
+                festivo: f.nombre,
+                fecha: formatearFecha(fecha)
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    return resultado;
 }
 
 module.exports = { verificarFecha, listarFestivos };
